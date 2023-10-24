@@ -81,7 +81,7 @@ Create the pusher
 ```typescript
 export const pusher = appSubscriptions.pusher({
   store: dynamodb({ tableName: "your table goes here", dynamoDBClient }),
-  endpoint: WebSocketApi.WebsocketApi.httpsUrl,
+  endpoint: "your websocket api endpoint goes here",
 });
 ```
 
