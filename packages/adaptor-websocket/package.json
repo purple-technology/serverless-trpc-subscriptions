@@ -1,0 +1,33 @@
+{
+    "name": "@serverless-trpc-subscriptions/adaptor-websocket",
+    "private": true,
+    "version": "0.0.1",
+    "main": "./src/index.ts",
+    "exports": {
+        ".": "./src/subscriptions/subscriptions.ts",
+        "./connect": "./src/connect/index.ts",
+        "./handler": "./src/handler/index.ts",
+        "./disconnect": "./src/disconnect/index.ts",
+        "./pusher": "./src/pusher/index.ts"
+    },
+    "scripts": {
+        "type-check": "tsc",
+        "test": "vitest"
+    },
+    "devDependencies": {
+        "typescript": "^5.2.2",
+        "@types/aws-lambda": "^8.10.122",
+        "@tsconfig/node18": "^18.2.2",
+        "@types/node": "^20.8.2",
+        "vitest": "^0.34.6",
+        "aws-sdk-client-mock": "^3.0.0",
+        "aws-sdk-client-mock-jest": "^3.0.0"
+    },
+    "dependencies": {
+        "@aws-sdk/client-dynamodb": "^3.423.0",
+        "@aws-sdk/lib-dynamodb": "^3.423.0",
+        "@trpc/server": "^10.40.0",
+        "@aws-sdk/client-apigatewaymanagementapi": "^3.418.0",
+        "zod": "^3.21.4"
+    }
+}
