@@ -61,7 +61,7 @@ export const main = appSubscriptions.connect({
 ```typescript
 export const main = appSubscriptions.disconnect({
   store: dynamodb({
-    tableName: "your table goes here",
+    tableName: "your table name goes here",
     dynamoDBClient,
   }),
 });
@@ -70,7 +70,7 @@ export const main = appSubscriptions.disconnect({
 ```typescript
 export const main = appSubscriptions.handler({
   store: dynamodb({
-    tableName: "your table goes here",
+    tableName: "your table name goes here",
     dynamoDBClient,
   }),
 });
@@ -80,7 +80,7 @@ Create the pusher
 
 ```typescript
 export const pusher = appSubscriptions.pusher({
-  store: dynamodb({ tableName: "your table goes here", dynamoDBClient }),
+  store: dynamodb({ tableName: "your table name goes here", dynamoDBClient }),
   endpoint: "your websocket api endpoint goes here",
 });
 ```
@@ -117,4 +117,81 @@ api.mySubscription.useSubscription(
 );
 ```
 
-# Infrastructure
+# Usage with SST
+
+We recommend SST to deploy serverless applications to AWS. It provdes a WebSocketApi construct to deploy to Api Gateway
+
+First use the Table construct. A dynamodb table is required to persist connections and subscriptions.
+
+```typescript
+const table = new Table(stack, "Subscriptions", {
+  primaryIndex: {
+    partitionKey: "pk",
+    sortKey: "sk",
+  },
+  fields: {
+    pk: "string",
+    sk: "string",
+  },
+  cdk: {
+    table: {
+      removalPolicy: RemovalPolicy.DESTROY,
+    },
+  },
+  timeToLiveAttribute: "expireAt",
+});
+```
+
+Fields pk and sk are required fields to be the partition key and sort key respectively. A expireAt field is used to delete connection and subscriptions which are older than 4 hours
+
+Then define your web socket api construct
+
+```typescript
+const websocket = new WebSocketApi(stack, "WebsocketApi", {
+  defaults: {
+    function: {
+      bind: [table],
+    },
+  },
+  routes: {
+    $connect: "./packages/functions/src/api/websocket/connect.main",
+    $default: "./packages/functions/src/api/websocket/handler.main",
+    $disconnect: "./packages/functions/src/api/websocket/disconnect.main",
+  },
+});
+
+You should bind the subscription table to the web socket api so it can be used to connect, disconnect and handle subscriptions. $connect, $diconnect, $default reference lambdas which are created from the adaptors
+
+```
+
+Now you just need to use the SST `sst/node` to connect it the adaptors to your infrastructure
+
+```typescript
+//packages/functions/src/api/websocket/connect
+export const main = appSubscriptions.connect({
+  store: dynamodb({
+    dynamoDBClient,
+    tableName: Table.Subscriptions.tableName,
+  }),
+});
+```
+
+```typescript
+//packages/functions/src/api/websocket/disconnect
+export const main = appSubscriptions.disconnect({
+  store: dynamodb({
+    tableName: Table.Subscriptions.tableName,
+    dynamoDBClient,
+  }),
+});
+```
+
+```typescript
+//packages/functions/src/api/websocket/handler
+export const main = appSubscriptions.handler({
+  store: dynamodb({
+    tableName: Table.Subscriptions.tableName,
+    dynamoDBClient,
+  }),
+});
+```
