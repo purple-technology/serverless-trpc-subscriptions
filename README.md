@@ -1,6 +1,6 @@
 # Motivation
 
-Subscriptions and real time data is a common requirement for apps. At purple we love the type-safety provided by tRPC and we also love serverless. tRPC currently requires a stateful server while serverless is of course stateless. Here we're providing the following solutions:
+Subscriptions and real time data is a common requirement for apps. At purple we love the type-safety provided by tRPC and we also love serverless. tRPC currently requires a stateful server for websockets while serverless is of course stateless. Here we're providing the following solutions:
 
 - Provide adapters for AWS API Gateway to easily create $connect, $disconnect and a main handler in a type-safe manner
 - Provide logic to persist subscriptions in DynamoDB using single table design
@@ -163,7 +163,7 @@ const websocket = new WebSocketApi(stack, "WebsocketApi", {
 
 You should bind the subscription table to the web socket api so it can be used to connect, disconnect and handle subscriptions. $connect, $diconnect, $default reference lambdas which are created from the adaptors
 
-Now you just need to use the SST `sst/node` to connect it the adaptors to your infrastructure
+Now you just need to use the SST's `sst/node` to connect the adaptors to your infrastructure
 
 ```typescript
 //packages/functions/src/api/websocket/connect
@@ -195,7 +195,7 @@ export const main = appSubscriptions.handler({
 });
 ```
 
-To push in a lambda function you need to first use the function construct and bind it to the websocket and table. For example you could push a message on the subscription with the consumer of an event bus
+To push to a subscription in a lambda function you need to first use the function construct and bind it to the websocket and table. For example you could push a message to the subscription in the consumer of an event bus
 
 ```typescript
 const eventBus = new EventBus(stack, "EventBus");
@@ -234,7 +234,7 @@ export const main = EventHandler(Events.MyEvent, async (event) => {
 });
 ```
 
-And of course you can use environment variables in NextJS to connect to the web socket api
+And of course you can use environment variables in NextJS to connect to the web socket api so the client can subscribe
 
 ```typescript
 new NextjsSite(context.stack, "Web", {
@@ -280,4 +280,4 @@ export const Providers: React.FunctionComponent<ProviderProps> = ({
 };
 ```
 
-Lets recap. This approach allows us to continue using AWS infrastructure in serverless way. We can push notifications in any lambda we deploy to AWS while keeping type safety. We can filter subscriptions based on defined filters on anything in input or ctx of the trpc subscription
+Lets recap. This approach allows us to continue using AWS infrastructure and serverless. We can push notifications in any lambda we deploy to AWS while keeping type safety. We can filter subscriptions based on defined filters on anything in input or ctx of the trpc subscription
