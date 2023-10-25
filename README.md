@@ -91,7 +91,7 @@ Push to the subscription in your backend processes (lambda etc).
 await pusher.routes.mySubscription.push({
   data: "hi",
   filter: {
-    name: "nameFilter",
+    name: "userIdAndName",
     input: {
       name: "name1",
     },
@@ -102,4 +102,19 @@ await pusher.routes.mySubscription.push({
 });
 ```
 
-This will push a message to client subscribed with input.name name1 and ctx.userId user1
+Subscribe on the client like any other tRPC subscription
+
+```typescript
+api.mySubscription.useSubscription(
+  {
+    name: "hello",
+  },
+  {
+    onData: (data) => {
+      // handle on data
+    },
+  }
+);
+```
+
+# Infrastructure
