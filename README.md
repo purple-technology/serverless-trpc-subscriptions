@@ -159,10 +159,9 @@ const websocket = new WebSocketApi(stack, "WebsocketApi", {
     $disconnect: "./packages/functions/src/api/websocket/disconnect.main",
   },
 });
+```
 
 You should bind the subscription table to the web socket api so it can be used to connect, disconnect and handle subscriptions. $connect, $diconnect, $default reference lambdas which are created from the adaptors
-
-```
 
 Now you just need to use the SST `sst/node` to connect it the adaptors to your infrastructure
 
@@ -195,3 +194,90 @@ export const main = appSubscriptions.handler({
   }),
 });
 ```
+
+To push in a lambda function you need to first use the function construct and bind it to the websocket and table. For example you could push a message on the subscription with the consumer of an event bus
+
+```typescript
+const eventBus = new EventBus(stack, "EventBus");
+
+eventBus.subscribe("myEvent", {
+  handler: "./packages/functions/src/events/myEvent.main",
+  bind: [websocket, table],
+});
+```
+
+You can then wire up the pusher to the web socket api and table
+
+```typescript
+export const pusher = appSubscriptions.pusher({
+  store: dynamodb({ tableName: Table.Subscriptions.tableName, dynamoDBClient }),
+  endpoint: WebSocketApi.WebsocketApi.httpsUrl,
+});
+```
+
+And then you can push the message in the event bus consumer
+
+```typescript
+export const main = EventHandler(Events.MyEvent, async (event) => {
+  await pusher.routes.mySubscription.push({
+    data: "hi",
+    filter: {
+      name: "userIdAndName",
+      input: {
+        name: "Bob",
+      },
+      ctx: {
+        userId: "user1",
+      },
+    },
+  });
+});
+```
+
+And of course you can use environment variables in NextJS to connect to the web socket api
+
+```typescript
+new NextjsSite(context.stack, "Web", {
+  path: "./packages/web",
+  environment: {
+    NEXT_PUBLIC_HTTP_URL: http.url,
+    NEXT_PUBLIC_WS_URL: websocket.url,
+  },
+});
+```
+
+And make your own provider to wire it up to the frontend. Notice we can support http or ws depending on if it is a subscription or not
+
+```typescript
+const wsClient = createWSClient({
+  url: process.env.NEXT_PUBLIC_WS_URL ?? "",
+});
+
+export const Providers: React.FunctionComponent<ProviderProps> = ({
+  children,
+}) => {
+  const [queryClient] = React.useState(() => new QueryClient());
+  const [trpcClient] = React.useState(() =>
+    api.createClient({
+      links: [
+        splitLink({
+          condition: (op) => op.type === "subscription",
+          true: wsLink({
+            client: wsClient,
+          }),
+          false: httpBatchLink({
+            url: `${process.env.NEXT_PUBLIC_HTTP_URL}/api` ?? "",
+          }),
+        }),
+      ],
+    })
+  );
+  return (
+    <api.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </api.Provider>
+  );
+};
+```
+
+Lets recap. This approach allows us to continue using AWS infrastructure in serverless way. We can push notifications in any lambda we deploy to AWS while keeping type safety. We can filter subscriptions based on defined filters on anything in input or ctx of the trpc subscription
