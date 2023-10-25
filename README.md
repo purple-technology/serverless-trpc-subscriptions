@@ -281,3 +281,21 @@ export const Providers: React.FunctionComponent<ProviderProps> = ({
 ```
 
 Lets recap. This approach allows us to continue using AWS infrastructure and serverless. We can push notifications in any lambda we deploy to AWS while keeping type safety. We can filter subscriptions based on defined filters on anything in input or ctx of the trpc subscription
+
+# Deep Dive
+
+## initSubscriptions
+
+`initSubscriptions` initialiazes the subscriptions instance. The subscriptions instance allows you to create subscription resolvers and to attach a router to the subscriptions instance.
+
+## subcriptions.resolver
+
+`resolver` creates a function which returns a tRPC observable. There are some limitations to observables in serverless. We cannot create inifinite observables and they have to finish at some point. This is because serverless must also be stateless. Most of the time you probably just want to send a message to a subscriber, which `resolver` is perfect for. `resolver` is required as it wraps a dummy observable with hooks so parts of the observable can be executed depending on different events (started, stopped, data etc)
+
+## subscriptions.router
+
+`router` is required to let the subscriptions instance now about your router. This is important so we can infer your procedures to allow configuration of filtering. The typescript behind this works very similar to a tRPC client (using mapped types and proxies at runtime)
+
+## subscriptions.routes.[procedure].filter
+
+Defines what you fields from input and ctx you can filter on when pushing to the subscription
