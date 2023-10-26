@@ -8,7 +8,7 @@ importers:
 
   .: {}
 
-  examples/sst:
+  examples/sst-issues:
     devDependencies:
       '@tsconfig/node18':
         specifier: ^18.2.2
@@ -26,7 +26,7 @@ importers:
         specifier: ^5.2.2
         version: 5.2.2
 
-  examples/sst/packages/core:
+  examples/sst-issues/packages/core:
     dependencies:
       uuid:
         specifier: ^9.0.1
@@ -51,7 +51,7 @@ importers:
         specifier: ^0.34.6
         version: 0.34.6
 
-  examples/sst/packages/functions:
+  examples/sst-issues/packages/functions:
     dependencies:
       '@aws-sdk/client-dynamodb':
         specifier: ^3.423.0
@@ -62,7 +62,7 @@ importers:
       '@serverless-trpc-subscriptions/adaptor-websocket':
         specifier: workspace:*
         version: link:../../../../packages/adaptor-websocket
-      '@serverless-trpc-subscriptions/examples-sst-core':
+      '@serverless-trpc-subscriptions/examples-sst-issues-core':
         specifier: workspace:*
         version: link:../core
       '@trpc/server':
@@ -94,15 +94,15 @@ importers:
         specifier: ^0.34.6
         version: 0.34.6
 
-  examples/sst/packages/web:
+  examples/sst-issues/packages/web:
     dependencies:
       '@hookform/resolvers':
         specifier: ^3.3.2
         version: 3.3.2(react-hook-form@7.47.0)
-      '@serverless-trpc-subscriptions/examples-sst-core':
+      '@serverless-trpc-subscriptions/examples-sst-issues-core':
         specifier: workspace:*
         version: link:../core
-      '@serverless-trpc-subscriptions/examples-sst-functions':
+      '@serverless-trpc-subscriptions/examples-sst-issues-functions':
         specifier: workspace:*
         version: link:../functions
       '@tanstack/react-query':

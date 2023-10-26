@@ -40,6 +40,12 @@ Define filters based on the routes
 ```typescript
 export const appSubscriptions = subscriptions
   .router({ router: appRouter })
+  .store({
+    store: dynamodb({
+      tableName: "your table name goes here",
+      dynamoDBClient: new DynamoDBClient({}),
+    }),
+  })
   .routes.mySubscription.filter({
     name: "userIdAndName",
     ctx: {
@@ -54,37 +60,21 @@ export const appSubscriptions = subscriptions
 Create the adaptors ($connect, handler, $disconnect)
 
 ```typescript
-export const main = appSubscriptions.connect({
-  store: dynamodb({
-    dynamoDBClient,
-    tableName: "your table name goes here",
-  }),
-});
+export const main = appSubscriptions.connect();
 ```
 
 ```typescript
-export const main = appSubscriptions.disconnect({
-  store: dynamodb({
-    tableName: "your table name goes here",
-    dynamoDBClient,
-  }),
-});
+export const main = appSubscriptions.disconnect();
 ```
 
 ```typescript
-export const main = appSubscriptions.handler({
-  store: dynamodb({
-    tableName: "your table name goes here",
-    dynamoDBClient,
-  }),
-});
+export const main = appSubscriptions.handler();
 ```
 
 Create the publisher
 
 ```typescript
 export const publisher = appSubscriptions.publisher({
-  store: dynamodb({ tableName: "your table name goes here", dynamoDBClient }),
   endpoint: "your websocket api endpoint goes here",
 });
 ```

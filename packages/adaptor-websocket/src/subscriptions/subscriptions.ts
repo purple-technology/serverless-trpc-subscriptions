@@ -9,13 +9,10 @@ import {
 import { Observable, observable } from "@trpc/server/observable";
 import { inferTransformedSubscriptionOutput } from "@trpc/server/shared";
 import { Connect, ConnectOptions, connect } from "../connect/connect.adaptor";
-import {
-  Disconnect,
-  DisconnectOptions,
-  disconnect,
-} from "../disconnect/disconnect.adaptor";
+import { Disconnect, disconnect } from "../disconnect/disconnect.adaptor";
 import { Handler, HandlerOptions, handler } from "../handler/handler.adaptor";
 import { PublisherOptions, publisher } from "../publisher/publisher.adaptor";
+import { DynamoDbResult } from "../dynamodb/combined";
 
 type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
 
@@ -79,6 +76,7 @@ type ProcedureSubscription<
   TContext,
   TFilters extends Filters,
   TCanPublish extends boolean,
+  TCanUseAdaptors extends boolean,
   TInput = inferProcedureInput<TProcedure>
 > = OmitNever<{
   readonly filter: <
@@ -88,7 +86,9 @@ type ProcedureSubscription<
   ) => RouterSubscriptions<
     TRouter,
     TContext,
-    TFilters & { [TKey in TPath]: TFilterOptions }
+    TFilters & { [TKey in TPath]: TFilterOptions },
+    TCanPublish,
+    TCanUseAdaptors
   >;
   readonly publish: TCanPublish extends false
     ? never
@@ -108,7 +108,8 @@ type DecorateProcedureWithSubscriptions<
   TPath extends string,
   TContext,
   TFilters extends Filters,
-  TCanPublish extends boolean
+  TCanPublish extends boolean,
+  TCanUseAdaptors extends boolean
 > = TProcedure extends AnyRouter
   ? DecorateProcedureRecordWithSubscriptions<
       TRouter,
@@ -116,7 +117,8 @@ type DecorateProcedureWithSubscriptions<
       TPath,
       TContext,
       TFilters,
-      TCanPublish
+      TCanPublish,
+      TCanUseAdaptors
     >
   : TProcedure extends AnySubscriptionProcedure
   ? ProcedureSubscription<
@@ -125,7 +127,8 @@ type DecorateProcedureWithSubscriptions<
       TPath,
       TContext,
       TFilters,
-      TCanPublish
+      TCanPublish,
+      TCanUseAdaptors
     >
   : never;
 
@@ -135,7 +138,8 @@ type DecorateProcedureRecordWithSubscriptions<
   TPath extends string,
   TContext,
   TFilters extends Filters,
-  TCanPublish extends boolean
+  TCanPublish extends boolean,
+  TCanUseAdaptors extends boolean
 > = {
   [TKey in keyof TProcedures]: DecorateProcedureWithSubscriptions<
     TRouter,
@@ -143,11 +147,12 @@ type DecorateProcedureRecordWithSubscriptions<
     `${TPath}${TKey & string}`,
     TContext,
     TFilters,
-    TCanPublish
+    TCanPublish,
+    TCanUseAdaptors
   >;
 };
 
-export interface RouterSubscriptions<
+interface RouterSubscriptionsWithAdapters<
   TRouter extends AnyRouter,
   TContext = inferRouterContext<TRouter>,
   TFilters extends Filters = {},
@@ -159,25 +164,64 @@ export interface RouterSubscriptions<
     "",
     TContext,
     TFilters,
-    TCanPublish
+    TCanPublish,
+    true
   >;
-  connect: Connect;
-  disconnect: (
-    options: Omit<DisconnectOptions, "config">
-  ) => ReturnType<Disconnect>;
+  connect: () => ReturnType<Connect>;
+  disconnect: () => ReturnType<Disconnect>;
   handler: (
-    options: Omit<HandlerOptions<TRouter>, "config">
+    options?: Omit<HandlerOptions<TRouter>, "config" | "store">
   ) => ReturnType<Handler>;
   publisher: (
-    options: Omit<PublisherOptions, "config">
-  ) => RouterSubscriptions<TRouter, TContext, TFilters, true>;
+    options: Omit<PublisherOptions, "config" | "store">
+  ) => RouterSubscriptionsWithAdapters<TRouter, TContext, TFilters, true>;
 }
+
+interface StoreOptions {
+  readonly store: DynamoDbResult;
+}
+
+interface RouterSubscriptionsWithoutAdaptors<
+  TRouter extends AnyRouter,
+  TContext = inferRouterContext<TRouter>,
+  TFilters extends Filters = {},
+  TCanPublish extends boolean = false
+> {
+  routes: DecorateProcedureRecordWithSubscriptions<
+    TRouter,
+    TRouter["_def"]["record"],
+    "",
+    TContext,
+    TFilters,
+    TCanPublish,
+    false
+  >;
+  store: (
+    options: StoreOptions
+  ) => RouterSubscriptionsWithAdapters<
+    TRouter,
+    TContext,
+    TFilters,
+    TCanPublish
+  >;
+}
+
+export type RouterSubscriptions<
+  TRouter extends AnyRouter,
+  TContext = inferRouterContext<TRouter>,
+  TFilters extends Filters = {},
+  TCanPublish extends boolean = false,
+  TCanUseAdaptors extends boolean = false
+> = TCanUseAdaptors extends false
+  ? RouterSubscriptionsWithoutAdaptors<TRouter, TContext, TFilters, TCanPublish>
+  : RouterSubscriptionsWithAdapters<TRouter, TContext, TFilters, TCanPublish>;
 
 export interface Config<TRouter extends AnyRouter = AnyRouter> {
   readonly _router: TRouter;
   readonly _filters: Filters;
   readonly _subscribers: Map<string, (data: unknown) => void>;
   readonly _publisher: Omit<PublisherOptions, "config"> | null;
+  readonly _store: StoreOptions | null;
 }
 
 interface ProxyCallbackOptions<TTarget extends object> {
@@ -276,11 +320,24 @@ export const initSubscriptions = (): SubscriptionsResult => {
               _publisher: firstArg as Omit<PublisherOptions, "config">,
             });
           }
+          case "store": {
+            const firstArg = options.args[0];
+
+            return createRecursiveProxy(callback, [], {
+              ...options.target,
+              _store: firstArg as StoreOptions,
+            });
+          }
           case "publish": {
             if (options.target._publisher == null) return;
 
+            const store = options.target._store?.store.publisher;
+
+            if (store == null) return;
+
             const publish = publisher({
               ...options.target._publisher,
+              store,
               config: options.target,
             });
 
@@ -292,17 +349,31 @@ export const initSubscriptions = (): SubscriptionsResult => {
             });
           }
           case "connect": {
-            return connect(options.args[0] as ConnectOptions);
+            const store = options.target._store?.store.connect;
+
+            if (store == null) return;
+
+            return connect({ store });
           }
           case "disconnect": {
+            const store = options.target._store?.store.disconnect;
+
+            if (store == null) return;
+
             return disconnect({
-              ...(options.args[0] as DisconnectOptions),
+              store,
               config: config as unknown as Config,
             });
           }
           case "handler": {
+            const firstArg = options.args[0] as HandlerOptions<TRouter>;
+            const store = options.target._store?.store.handler;
+
+            if (store == null) return;
+
             return handler({
-              ...(options.args[0] as HandlerOptions<TRouter>),
+              ...firstArg,
+              store,
               config: config as unknown as Config,
             });
           }
@@ -314,6 +385,7 @@ export const initSubscriptions = (): SubscriptionsResult => {
         _router: options.router,
         _subscribers: subscribers,
         _publisher: null,
+        _store: null,
       }) as RouterSubscriptions<TRouter>;
     },
   };

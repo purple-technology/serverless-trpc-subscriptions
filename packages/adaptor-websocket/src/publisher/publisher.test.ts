@@ -3,7 +3,6 @@ import { initTRPC } from "@trpc/server";
 import { expect, test } from "vitest";
 import { z } from "zod";
 import { initSubscriptions } from "../subscriptions/subscriptions";
-import { dynamodb } from "./publisher.dynamo";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { mockClient } from "aws-sdk-client-mock";
 import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
@@ -13,6 +12,7 @@ import {
   PostToConnectionCommand,
 } from "@aws-sdk/client-apigatewaymanagementapi";
 import { TRPCResponseMessage } from "@trpc/server/rpc";
+import { dynamodb } from "../dynamodb/combined";
 
 test("when publishing a subscription it queries dynamodb and sends data", async () => {
   const tableName = "tableName";
@@ -54,13 +54,12 @@ test("when publishing a subscription it queries dynamodb and sends data", async 
 
   apigatewayMock.on(PostToConnectionCommand).resolves({});
 
-  const subscriptionsWithRouter = subscriptions.router({ router }).publisher({
-    store: dynamodb({
-      tableName: "tableName",
-      dynamoDBClient,
-    }),
-    endpoint: "endpoint",
-  });
+  const subscriptionsWithRouter = subscriptions
+    .router({ router })
+    .store({ store: dynamodb({ tableName: "tableName", dynamoDBClient }) })
+    .publisher({
+      endpoint: "endpoint",
+    });
 
   await subscriptionsWithRouter.routes.mySubscription.publish({
     data: "hi",
@@ -138,11 +137,13 @@ test("when publishing a subscription with input it queries dynamodb and sends da
         id: true,
       },
     })
-    .publisher({
+    .store({
       store: dynamodb({
         tableName: "tableName",
         dynamoDBClient,
       }),
+    })
+    .publisher({
       endpoint: "endpoint",
     });
 
@@ -230,11 +231,8 @@ test("when publishing a subscription with ctx it queries dynamodb and sends data
         userId: true,
       },
     })
+    .store({ store: dynamodb({ tableName: "tableName", dynamoDBClient }) })
     .publisher({
-      store: dynamodb({
-        tableName: "tableName",
-        dynamoDBClient,
-      }),
       endpoint: "endpoint",
     });
 
@@ -325,11 +323,13 @@ test("when publising a subscription with ctx and input it queries dynamodb and s
         userId: true,
       },
     })
-    .publisher({
+    .store({
       store: dynamodb({
         tableName: "tableName",
         dynamoDBClient,
       }),
+    })
+    .publisher({
       endpoint: "endpoint",
     });
 
@@ -428,11 +428,8 @@ test("when publishing a subcription with ctx or input and ctx is used it queries
         },
       }
     )
+    .store({ store: dynamodb({ tableName: "tableName", dynamoDBClient }) })
     .publisher({
-      store: dynamodb({
-        tableName: "tableName",
-        dynamoDBClient,
-      }),
       endpoint: "endpoint",
     });
 
@@ -528,11 +525,8 @@ test("when publishing a subcription with ctx or input and input is used it queri
         },
       }
     )
+    .store({ store: dynamodb({ tableName: "tableName", dynamoDBClient }) })
     .publisher({
-      store: dynamodb({
-        tableName: "tableName",
-        dynamoDBClient,
-      }),
       endpoint: "endpoint",
     });
 

@@ -1,0 +1,13 @@
+{
+  "extends": "@tsconfig/node18/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@serverless-trpc-subscriptions/examples-sst-issues-functions/*": ["../functions/src/*"],
+      "@serverless-trpc-subscriptions/examples-sst-issues-core/*": ["../core/src/*"]
+    }
+  }
+}

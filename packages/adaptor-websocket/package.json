@@ -4,7 +4,7 @@
     "version": "0.0.1",
     "main": "./src/index.ts",
     "exports": {
-        ".": "./src/subscriptions/subscriptions.ts",
+        ".": "./src/index.ts",
         "./connect": "./src/connect/index.ts",
         "./handler": "./src/handler/index.ts",
         "./disconnect": "./src/disconnect/index.ts",

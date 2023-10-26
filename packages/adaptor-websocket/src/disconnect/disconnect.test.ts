@@ -1,6 +1,5 @@
 import "aws-sdk-client-mock-jest";
 import { expect, test } from "vitest";
-import { dynamodb } from "./disconnect.dynamodb";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   DeleteCommand,
@@ -16,6 +15,7 @@ import {
   ConnectionByConnectionId,
   SubscriptionByConnectionId,
 } from "../dynamodb/table";
+import { dynamodb } from "../dynamodb/combined";
 
 test("when disconnected it deletes connections and subscriptions from dynamodb", async () => {
   const tableName = "tableName";
@@ -34,14 +34,14 @@ test("when disconnected it deletes connections and subscriptions from dynamodb",
       .subscription(subscriptions.resolver<string>()),
   });
 
-  const subscriptionsWithRouter = subscriptions.router({ router });
-
-  const main = subscriptionsWithRouter.disconnect({
+  const subscriptionsWithRouter = subscriptions.router({ router }).store({
     store: dynamodb({
       tableName,
       dynamoDBClient,
     }),
   });
+
+  const main = subscriptionsWithRouter.disconnect();
 
   const event = {
     requestContext: {
@@ -126,12 +126,8 @@ test("when disconnected with input filters it deletes connections and subscripti
   const main = subscriptions
     .router({ router })
     .routes.mySubscription.filter({ name: "id", input: { id: true } })
-    .disconnect({
-      store: dynamodb({
-        tableName,
-        dynamoDBClient,
-      }),
-    });
+    .store({ store: dynamodb({ tableName, dynamoDBClient }) })
+    .disconnect();
 
   const event = {
     requestContext: {
@@ -225,12 +221,13 @@ test("when disconnected with ctx filters it deletes connections and subscription
       input: { id: true },
       ctx: { userId: true },
     })
-    .disconnect({
+    .store({
       store: dynamodb({
         tableName,
         dynamoDBClient,
       }),
-    });
+    })
+    .disconnect();
 
   const event = {
     requestContext: {

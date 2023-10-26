@@ -1,6 +1,5 @@
 import "aws-sdk-client-mock-jest";
 import { test, expect, vi, beforeAll, beforeEach } from "vitest";
-import { dynamodb } from "./handler.dynamo";
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
@@ -24,6 +23,7 @@ import {
   SubscriptionByPath,
 } from "../dynamodb/table";
 import { afterEach } from "node:test";
+import { dynamodb } from "../dynamodb/combined";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -54,12 +54,15 @@ test("when subscription is started it is put into dynamodb and posts started mes
       .subscription(subscriptions.resolver<string>()),
   });
 
-  const main = subscriptions.router({ router }).handler({
-    store: dynamodb({
-      tableName,
-      dynamoDBClient,
-    }),
-  });
+  const main = subscriptions
+    .router({ router })
+    .store({
+      store: dynamodb({
+        tableName,
+        dynamoDBClient,
+      }),
+    })
+    .handler();
 
   const message: TRPCClientOutgoingMessage = {
     id: "1",
@@ -152,12 +155,15 @@ test("when subscription is stopped it is deleted from dynamodb and posts stopped
       .subscription(subscriptions.resolver<string>()),
   });
 
-  const main = subscriptions.router({ router }).handler({
-    store: dynamodb({
-      tableName,
-      dynamoDBClient,
-    }),
-  });
+  const main = subscriptions
+    .router({ router })
+    .store({
+      store: dynamodb({
+        tableName,
+        dynamoDBClient,
+      }),
+    })
+    .handler();
 
   const message: TRPCClientOutgoingMessage = {
     id: "1",
@@ -252,12 +258,13 @@ test("when filtering by input and subscription has started it puts the subscript
         id: true,
       },
     })
-    .handler({
+    .store({
       store: dynamodb({
         tableName,
         dynamoDBClient,
       }),
-    });
+    })
+    .handler();
 
   const message: TRPCClientOutgoingMessage = {
     id: "1",
@@ -358,12 +365,13 @@ test("when filtering by input and subscription has stopped it deleted the subscr
         id: true,
       },
     })
-    .handler({
+    .store({
       store: dynamodb({
         tableName,
         dynamoDBClient,
       }),
-    });
+    })
+    .handler();
 
   const message: TRPCClientOutgoingMessage = {
     id: "1",
@@ -458,12 +466,14 @@ test("when filtering by ctx and subscription has started it puts subscriptions i
       name: "userId",
       ctx: { userId: true },
     })
-    .handler({
-      createContext: () => ({ userId: "userId" }),
+    .store({
       store: dynamodb({
         tableName,
         dynamoDBClient,
       }),
+    })
+    .handler({
+      createContext: () => ({ userId: "userId" }),
     });
 
   const message: TRPCClientOutgoingMessage = {
@@ -571,13 +581,15 @@ test("when filtering by ctx and subscription has stopped it deleted the subscrip
         userId: true,
       },
     })
-    .handler({
-      createContext: () => ({
-        userId: "userId",
-      }),
+    .store({
       store: dynamodb({
         tableName,
         dynamoDBClient,
+      }),
+    })
+    .handler({
+      createContext: () => ({
+        userId: "userId",
       }),
     });
 
@@ -675,12 +687,14 @@ test("when filtering by ctx and input and subscription has started it puts subsc
       input: { id: true },
       ctx: { userId: true },
     })
-    .handler({
-      createContext: () => ({ userId: "userId" }),
+    .store({
       store: dynamodb({
         tableName,
         dynamoDBClient,
       }),
+    })
+    .handler({
+      createContext: () => ({ userId: "userId" }),
     });
 
   const message: TRPCClientOutgoingMessage = {
@@ -791,13 +805,10 @@ test("when filtering by ctx and input and subscription has stopped it deleted th
         userId: true,
       },
     })
+    .store({ store: dynamodb({ tableName, dynamoDBClient }) })
     .handler({
       createContext: () => ({
         userId: "userId",
-      }),
-      store: dynamodb({
-        tableName,
-        dynamoDBClient,
       }),
     });
 
@@ -902,12 +913,14 @@ test("when filtering by ctx or input and subscription has started it puts the su
         input: { id: true },
       }
     )
-    .handler({
-      createContext: () => ({ userId: "userId" }),
+    .store({
       store: dynamodb({
         tableName,
         dynamoDBClient,
       }),
+    })
+    .handler({
+      createContext: () => ({ userId: "userId" }),
     });
 
   const message: TRPCClientOutgoingMessage = {
@@ -1033,13 +1046,10 @@ test("when filtering by ctx or input and subscription has stopped it deletes the
         },
       }
     )
+    .store({ store: dynamodb({ tableName, dynamoDBClient }) })
     .handler({
       createContext: () => ({
         userId: "userId",
-      }),
-      store: dynamodb({
-        tableName,
-        dynamoDBClient,
       }),
     });
 
