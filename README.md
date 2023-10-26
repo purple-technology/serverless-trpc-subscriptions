@@ -4,11 +4,11 @@ This is still work in progress and nothing is concrete yet.
 
 # Motivation
 
-Subscriptions and real time data is a common requirement for apps. At purple we love the type-safety provided by tRPC and we also love serverless. tRPC currently requires a stateful server for websockets while serverless is of course stateless. Here we're providing the following solutions:
+Subscriptions and real time data is a common requirement for apps. At Purple Technology we love the type-safety provided by tRPC and we also love serverless. tRPC currently requires a stateful server for websockets while serverless is of course stateless. Here we're providing the following solutions:
 
-- Provide adapters for AWS API Gateway to easily create $connect, $disconnect and a main handler in a type-safe manner
-- Provide logic to persist subscriptions in DynamoDB using single table design
-- To publish to a subscription in backend processes with type safety
+- Provide adapters for Amazon Websockets API Gateway to easily create $connect, $disconnect and a main handler in a type-safe manner
+- Provide logic to persist subscriptions in Amazon DynamoDB using single table design
+- To push to a subscription in backend processes with type safety
 - To filter subscriptions and only publish to a subscription based on ctx or input
 
 # Show me an example!
