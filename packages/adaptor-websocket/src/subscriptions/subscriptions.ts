@@ -15,43 +15,43 @@ import {
   disconnect,
 } from "../disconnect/disconnect.adaptor";
 import { Handler, HandlerOptions, handler } from "../handler/handler.adaptor";
-import { PusherOptions, pusher } from "../pusher/pusher.adaptor";
+import { PublisherOptions, publisher } from "../publisher/publisher.adaptor";
 
 type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
 
-type PushOptionsWithFilter<T, TFilters> = {
+type PublishOptionsWithFilter<T, TFilters> = {
   [TKey in keyof TFilters as TFilters[TKey] extends false
     ? never
     : TKey]: T[TKey & keyof T];
 };
 
-type InferPushOptions<
+type InferPublishOptions<
   TInput,
   TContext,
   TFilterOption extends FilterOption<unknown, unknown>
 > = TFilterOption extends FilterOption<unknown, unknown>
   ? {
       readonly [TKey in keyof TFilterOption]: TKey extends "ctx"
-        ? PushOptionsWithFilter<TContext, TFilterOption[TKey]>
+        ? PublishOptionsWithFilter<TContext, TFilterOption[TKey]>
         : TKey extends "input"
-        ? PushOptionsWithFilter<TInput, TFilterOption[TKey]>
+        ? PublishOptionsWithFilter<TInput, TFilterOption[TKey]>
         : TKey extends "name"
         ? TFilterOption[TKey]
         : never;
     }
   : never;
 
-interface PushOptions<
+interface PublishOptions<
   TProcedure extends AnySubscriptionProcedure,
   TInput,
   TContext,
   TFilterOption extends FilterOption<unknown, unknown>,
   TData = inferTransformedSubscriptionOutput<TProcedure>
 > {
-  readonly filter?: InferPushOptions<TInput, TContext, TFilterOption>;
+  readonly filter?: InferPublishOptions<TInput, TContext, TFilterOption>;
   readonly data: TData;
 }
-export type AnyPushOptions = PushOptions<
+export type AnyPublishOptions = PublishOptions<
   AnySubscriptionProcedure,
   unknown,
   unknown,
@@ -78,7 +78,7 @@ type ProcedureSubscription<
   TPath extends string,
   TContext,
   TFilters extends Filters,
-  TCanPush extends boolean,
+  TCanPublish extends boolean,
   TInput = inferProcedureInput<TProcedure>
 > = OmitNever<{
   readonly filter: <
@@ -90,10 +90,10 @@ type ProcedureSubscription<
     TContext,
     TFilters & { [TKey in TPath]: TFilterOptions }
   >;
-  readonly push: TCanPush extends false
+  readonly publish: TCanPublish extends false
     ? never
     : (
-        options: PushOptions<
+        options: PublishOptions<
           TProcedure,
           TInput,
           TContext,
@@ -108,7 +108,7 @@ type DecorateProcedureWithSubscriptions<
   TPath extends string,
   TContext,
   TFilters extends Filters,
-  TCanPush extends boolean
+  TCanPublish extends boolean
 > = TProcedure extends AnyRouter
   ? DecorateProcedureRecordWithSubscriptions<
       TRouter,
@@ -116,7 +116,7 @@ type DecorateProcedureWithSubscriptions<
       TPath,
       TContext,
       TFilters,
-      TCanPush
+      TCanPublish
     >
   : TProcedure extends AnySubscriptionProcedure
   ? ProcedureSubscription<
@@ -125,7 +125,7 @@ type DecorateProcedureWithSubscriptions<
       TPath,
       TContext,
       TFilters,
-      TCanPush
+      TCanPublish
     >
   : never;
 
@@ -135,7 +135,7 @@ type DecorateProcedureRecordWithSubscriptions<
   TPath extends string,
   TContext,
   TFilters extends Filters,
-  TCanPush extends boolean
+  TCanPublish extends boolean
 > = {
   [TKey in keyof TProcedures]: DecorateProcedureWithSubscriptions<
     TRouter,
@@ -143,7 +143,7 @@ type DecorateProcedureRecordWithSubscriptions<
     `${TPath}${TKey & string}`,
     TContext,
     TFilters,
-    TCanPush
+    TCanPublish
   >;
 };
 
@@ -151,7 +151,7 @@ export interface RouterSubscriptions<
   TRouter extends AnyRouter,
   TContext = inferRouterContext<TRouter>,
   TFilters extends Filters = {},
-  TCanPush extends boolean = false
+  TCanPublish extends boolean = false
 > {
   routes: DecorateProcedureRecordWithSubscriptions<
     TRouter,
@@ -159,7 +159,7 @@ export interface RouterSubscriptions<
     "",
     TContext,
     TFilters,
-    TCanPush
+    TCanPublish
   >;
   connect: Connect;
   disconnect: (
@@ -168,8 +168,8 @@ export interface RouterSubscriptions<
   handler: (
     options: Omit<HandlerOptions<TRouter>, "config">
   ) => ReturnType<Handler>;
-  pusher: (
-    options: Omit<PusherOptions, "config">
+  publisher: (
+    options: Omit<PublisherOptions, "config">
   ) => RouterSubscriptions<TRouter, TContext, TFilters, true>;
 }
 
@@ -177,7 +177,7 @@ export interface Config<TRouter extends AnyRouter = AnyRouter> {
   readonly _router: TRouter;
   readonly _filters: Filters;
   readonly _subscribers: Map<string, (data: unknown) => void>;
-  readonly _pusher: Omit<PusherOptions, "config"> | null;
+  readonly _publisher: Omit<PublisherOptions, "config"> | null;
 }
 
 interface ProxyCallbackOptions<TTarget extends object> {
@@ -268,25 +268,25 @@ export const initSubscriptions = (): SubscriptionsResult => {
               },
             });
           }
-          case "pusher": {
+          case "publisher": {
             const firstArg = options.args[0];
 
             return createRecursiveProxy(callback, [], {
               ...options.target,
-              _pusher: firstArg as Omit<PusherOptions, "config">,
+              _publisher: firstArg as Omit<PublisherOptions, "config">,
             });
           }
-          case "push": {
-            if (options.target._pusher == null) return;
+          case "publish": {
+            if (options.target._publisher == null) return;
 
-            const push = pusher({
-              ...options.target._pusher,
+            const publish = publisher({
+              ...options.target._publisher,
               config: options.target,
             });
 
-            const firstArg = options.args[0] as AnyPushOptions;
+            const firstArg = options.args[0] as AnyPublishOptions;
 
-            return push({
+            return publish({
               ...firstArg,
               path,
             });
@@ -313,7 +313,7 @@ export const initSubscriptions = (): SubscriptionsResult => {
         _filters: {},
         _router: options.router,
         _subscribers: subscribers,
-        _pusher: null,
+        _publisher: null,
       }) as RouterSubscriptions<TRouter>;
     },
   };

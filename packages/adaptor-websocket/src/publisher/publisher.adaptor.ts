@@ -1,6 +1,6 @@
-import { AnyProcedure, AnyRouter, TRPCError } from "@trpc/server";
+import { AnyProcedure, TRPCError } from "@trpc/server";
 import { Config } from "../subscriptions/subscriptions";
-import { PusherStore } from "./pusher.store";
+import { PublisherStore } from "./publisher.store";
 import {
   ApiGatewayManagementApiClient,
   GoneException,
@@ -9,14 +9,14 @@ import {
 import { isObservable } from "@trpc/server/observable";
 import { TRPCResponseMessage } from "@trpc/server/rpc";
 
-export interface PusherOptions {
+export interface PublisherOptions {
   readonly config: Config;
-  readonly store: PusherStore;
+  readonly store: PublisherStore;
   readonly endpoint: string;
   readonly subscribeTimeout?: number;
 }
 
-export interface InternalPushOptions {
+export interface InternalPublishOptions {
   readonly data: unknown;
   readonly filter?: {
     readonly name: string;
@@ -26,9 +26,9 @@ export interface InternalPushOptions {
   readonly path: string;
 }
 
-export type Push = (options: InternalPushOptions) => Promise<void>;
+export type Publish = (options: InternalPublishOptions) => Promise<void>;
 
-export const pusher = (options: PusherOptions): Push => {
+export const publisher = (options: PublisherOptions): Publish => {
   const apigateway = new ApiGatewayManagementApiClient({
     endpoint: options.endpoint,
   });

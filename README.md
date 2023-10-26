@@ -1,11 +1,15 @@
+# Work In Progress
+
+This is still work in progress and nothing is concrete yet.
+
 # Motivation
 
 Subscriptions and real time data is a common requirement for apps. At purple we love the type-safety provided by tRPC and we also love serverless. tRPC currently requires a stateful server for websockets while serverless is of course stateless. Here we're providing the following solutions:
 
 - Provide adapters for AWS API Gateway to easily create $connect, $disconnect and a main handler in a type-safe manner
 - Provide logic to persist subscriptions in DynamoDB using single table design
-- To push to a subscription in backend processes with type safety
-- To filter subscriptions and only push to a subscription based on ctx or input
+- To publish to a subscription in backend processes with type safety
+- To filter subscriptions and only publish to a subscription based on ctx or input
 
 # Show me an example!
 
@@ -76,19 +80,19 @@ export const main = appSubscriptions.handler({
 });
 ```
 
-Create the pusher
+Create the publisher
 
 ```typescript
-export const pusher = appSubscriptions.pusher({
+export const publisher = appSubscriptions.publisher({
   store: dynamodb({ tableName: "your table name goes here", dynamoDBClient }),
   endpoint: "your websocket api endpoint goes here",
 });
 ```
 
-Push to the subscription in your backend processes (lambda etc).
+Publish to the subscription in your backend processes (lambda etc).
 
 ```typescript
-await pusher.routes.mySubscription.push({
+await publisher.routes.mySubscription.publish({
   data: "hi",
   filter: {
     name: "userIdAndName",
@@ -195,7 +199,7 @@ export const main = appSubscriptions.handler({
 });
 ```
 
-To push to a subscription in a lambda function you need to first use the function construct and bind it to the websocket and table. For example you could push a message to the subscription in the consumer of an event bus
+To publish to a subscription in a lambda function you need to first use the function construct and bind it to the websocket and table. For example you could publish a message to the subscription in the consumer of an event bus
 
 ```typescript
 const eventBus = new EventBus(stack, "EventBus");
@@ -206,20 +210,20 @@ eventBus.subscribe("myEvent", {
 });
 ```
 
-You can then wire up the pusher to the web socket api and table
+You can then wire up the publisher to the web socket api and table
 
 ```typescript
-export const pusher = appSubscriptions.pusher({
+export const publisher = appSubscriptions.publisher({
   store: dynamodb({ tableName: Table.Subscriptions.tableName, dynamoDBClient }),
   endpoint: WebSocketApi.WebsocketApi.httpsUrl,
 });
 ```
 
-And then you can push the message in the event bus consumer
+And then you can publish the message in the event bus consumer
 
 ```typescript
 export const main = EventHandler(Events.MyEvent, async (event) => {
-  await pusher.routes.mySubscription.push({
+  await publisher.routes.mySubscription.publish({
     data: "hi",
     filter: {
       name: "userIdAndName",
@@ -280,7 +284,7 @@ export const Providers: React.FunctionComponent<ProviderProps> = ({
 };
 ```
 
-Lets recap. This approach allows us to continue using AWS infrastructure and serverless. We can push notifications in any lambda we deploy to AWS while keeping type safety. We can filter subscriptions based on defined filters on anything in input or ctx of the trpc subscription
+Lets recap. This approach allows us to continue using AWS infrastructure and serverless. We can publish notifications in any lambda we deploy to AWS while keeping type safety. We can filter subscriptions based on defined filters on anything in input or ctx of the trpc subscription
 
 # Deep Dive
 
@@ -298,4 +302,4 @@ Lets recap. This approach allows us to continue using AWS infrastructure and ser
 
 ## subscriptions.routes.[procedure].filter
 
-Defines what you fields from input and ctx you can filter on when pushing to the subscription
+Defines what you fields from input and ctx you can filter on when publishing to the subscription

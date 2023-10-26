@@ -3,7 +3,7 @@ import { initTRPC } from "@trpc/server";
 import { expect, test } from "vitest";
 import { z } from "zod";
 import { initSubscriptions } from "../subscriptions/subscriptions";
-import { dynamodb } from "./pusher.dynamo";
+import { dynamodb } from "./publisher.dynamo";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { mockClient } from "aws-sdk-client-mock";
 import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
@@ -14,7 +14,7 @@ import {
 } from "@aws-sdk/client-apigatewaymanagementapi";
 import { TRPCResponseMessage } from "@trpc/server/rpc";
 
-test("when pushing a subscription it queries dynamodb and sends data", async () => {
+test("when publishing a subscription it queries dynamodb and sends data", async () => {
   const tableName = "tableName";
   const subscriptions = initSubscriptions();
   const t = initTRPC.create();
@@ -54,7 +54,7 @@ test("when pushing a subscription it queries dynamodb and sends data", async () 
 
   apigatewayMock.on(PostToConnectionCommand).resolves({});
 
-  const subscriptionsWithRouter = subscriptions.router({ router }).pusher({
+  const subscriptionsWithRouter = subscriptions.router({ router }).publisher({
     store: dynamodb({
       tableName: "tableName",
       dynamoDBClient,
@@ -62,7 +62,7 @@ test("when pushing a subscription it queries dynamodb and sends data", async () 
     endpoint: "endpoint",
   });
 
-  await subscriptionsWithRouter.routes.mySubscription.push({
+  await subscriptionsWithRouter.routes.mySubscription.publish({
     data: "hi",
   });
 
@@ -90,7 +90,7 @@ test("when pushing a subscription it queries dynamodb and sends data", async () 
   });
 });
 
-test("when pushing a subscription with input it queries dynamodb and sends data", async () => {
+test("when publishing a subscription with input it queries dynamodb and sends data", async () => {
   const tableName = "tableName";
   const subscriptions = initSubscriptions();
   const t = initTRPC.create();
@@ -138,7 +138,7 @@ test("when pushing a subscription with input it queries dynamodb and sends data"
         id: true,
       },
     })
-    .pusher({
+    .publisher({
       store: dynamodb({
         tableName: "tableName",
         dynamoDBClient,
@@ -146,7 +146,7 @@ test("when pushing a subscription with input it queries dynamodb and sends data"
       endpoint: "endpoint",
     });
 
-  await subscriptionsWithRouter.routes.mySubscription.push({
+  await subscriptionsWithRouter.routes.mySubscription.publish({
     data: "hi",
     filter: {
       name: "id",
@@ -180,7 +180,7 @@ test("when pushing a subscription with input it queries dynamodb and sends data"
   });
 });
 
-test("when pushing a subscription with ctx it queries dynamodb and sends data", async () => {
+test("when publishing a subscription with ctx it queries dynamodb and sends data", async () => {
   const tableName = "tableName";
   const subscriptions = initSubscriptions();
   const t = initTRPC.context<{ userId: string }>().create();
@@ -230,7 +230,7 @@ test("when pushing a subscription with ctx it queries dynamodb and sends data", 
         userId: true,
       },
     })
-    .pusher({
+    .publisher({
       store: dynamodb({
         tableName: "tableName",
         dynamoDBClient,
@@ -238,7 +238,7 @@ test("when pushing a subscription with ctx it queries dynamodb and sends data", 
       endpoint: "endpoint",
     });
 
-  await subscriptionsWithRouter.routes.mySubscription.push({
+  await subscriptionsWithRouter.routes.mySubscription.publish({
     data: "hi",
     filter: {
       name: "userId",
@@ -272,7 +272,7 @@ test("when pushing a subscription with ctx it queries dynamodb and sends data", 
   });
 });
 
-test("when pushing a subscription with ctx and input it queries dynamodb and sends data", async () => {
+test("when publising a subscription with ctx and input it queries dynamodb and sends data", async () => {
   const tableName = "tableName";
   const subscriptions = initSubscriptions();
   const t = initTRPC.context<{ userId: string }>().create();
@@ -325,7 +325,7 @@ test("when pushing a subscription with ctx and input it queries dynamodb and sen
         userId: true,
       },
     })
-    .pusher({
+    .publisher({
       store: dynamodb({
         tableName: "tableName",
         dynamoDBClient,
@@ -333,7 +333,7 @@ test("when pushing a subscription with ctx and input it queries dynamodb and sen
       endpoint: "endpoint",
     });
 
-  await subscriptionsWithRouter.routes.mySubscription.push({
+  await subscriptionsWithRouter.routes.mySubscription.publish({
     data: "hi",
     filter: {
       name: "userIdAndId",
@@ -370,7 +370,7 @@ test("when pushing a subscription with ctx and input it queries dynamodb and sen
   });
 });
 
-test("when pushing a subcription with ctx or input and ctx is used it queries dynamodb and sends data", async () => {
+test("when publishing a subcription with ctx or input and ctx is used it queries dynamodb and sends data", async () => {
   const tableName = "tableName";
   const subscriptions = initSubscriptions();
   const t = initTRPC.context<{ userId: string }>().create();
@@ -428,7 +428,7 @@ test("when pushing a subcription with ctx or input and ctx is used it queries dy
         },
       }
     )
-    .pusher({
+    .publisher({
       store: dynamodb({
         tableName: "tableName",
         dynamoDBClient,
@@ -436,7 +436,7 @@ test("when pushing a subcription with ctx or input and ctx is used it queries dy
       endpoint: "endpoint",
     });
 
-  await subscriptionsWithRouter.routes.mySubscription.push({
+  await subscriptionsWithRouter.routes.mySubscription.publish({
     data: "hi",
     filter: {
       name: "userId",
@@ -470,7 +470,7 @@ test("when pushing a subcription with ctx or input and ctx is used it queries dy
   });
 });
 
-test("when pushing a subcription with ctx or input and input is used it queries dynamodb and sends data", async () => {
+test("when publishing a subcription with ctx or input and input is used it queries dynamodb and sends data", async () => {
   const tableName = "tableName";
   const subscriptions = initSubscriptions();
   const t = initTRPC.context<{ userId: string }>().create();
@@ -528,7 +528,7 @@ test("when pushing a subcription with ctx or input and input is used it queries 
         },
       }
     )
-    .pusher({
+    .publisher({
       store: dynamodb({
         tableName: "tableName",
         dynamoDBClient,
@@ -536,7 +536,7 @@ test("when pushing a subcription with ctx or input and input is used it queries 
       endpoint: "endpoint",
     });
 
-  await subscriptionsWithRouter.routes.mySubscription.push({
+  await subscriptionsWithRouter.routes.mySubscription.publish({
     data: "hi",
     filter: {
       name: "id",

@@ -1,5 +1,5 @@
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
-import { PusherStore } from "./pusher.store";
+import { PublisherStore } from "./publisher.store";
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { Subscription } from "../dynamodb/table";
 import { deleteConnection } from "../dynamodb/deleteConnection";
@@ -10,7 +10,7 @@ export interface DynamoDBOptions {
   readonly dynamoDBClient: DynamoDBClient;
 }
 
-export const dynamodb = (options: DynamoDBOptions): PusherStore => {
+export const dynamodb = (options: DynamoDBOptions): PublisherStore => {
   const dynamoDBClient = DynamoDBDocumentClient.from(options.dynamoDBClient, {
     marshallOptions: {
       removeUndefinedValues: true,

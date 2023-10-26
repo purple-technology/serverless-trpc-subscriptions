@@ -8,7 +8,7 @@
         "./connect": "./src/connect/index.ts",
         "./handler": "./src/handler/index.ts",
         "./disconnect": "./src/disconnect/index.ts",
-        "./pusher": "./src/pusher/index.ts"
+        "./publisher": "./src/publisher/index.ts"
     },
     "scripts": {
         "type-check": "tsc",

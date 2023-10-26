@@ -21,7 +21,7 @@ export type DeleteConnection = (
   options: Omit<DeleteConnectionOptions, "dynamoDBClient" | "tableName">
 ) => Promise<void>;
 
-export interface PusherStore {
+export interface PublisherStore {
   readonly findSubscriptions: FindSubscriptions;
   readonly deleteConnection: DeleteConnection;
 }
